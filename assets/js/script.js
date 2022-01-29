@@ -16,6 +16,7 @@ var createTask = function(taskText, taskDate, taskList) {
 
   // append to ul list on the page
   $("#list-" + taskList).append(taskLi);
+  
 };
 
 var loadTasks = function() {
@@ -45,6 +46,71 @@ var saveTasks = function() {
   localStorage.setItem("tasks", JSON.stringify(tasks));
 };
 //tasks are saved in an array that's a property of an object_
+
+//enable draggable/sortable feature on list-group element
+$(".card .list-group").sortable({
+  connectWith: $(".card .list-group"),
+  scroll: false,
+  tolerance: "pointer",
+  helper: "clone",
+  /*activate: function(event) {
+    console.log("activate", this);*/
+  activate:function(event, ui){
+  console.log(ui);
+    //captures the object properties 
+  },
+  deactivate: function(event, ui) {
+    console.log(ui);
+  },
+  over: function(event) {
+  console.log(event);
+  },
+  out: function(event) {
+    console.log(event);
+  },
+  update: function(event){
+     //array to store the task data in
+    var tempArr = [];
+    // loop over current set of children in sortable list
+    $(this).children().each(function() {
+      tempArr.push({
+      text: $(this)
+        .find("p")
+        .text()
+        .trim(),
+      date: $(this)
+        .find("span")
+        .text()
+        .trim(),
+      //add task data to the temp array as an object 
+      });
+    });
+// is this in the right place?*******5.3.5. below children() lookp
+    var arrName = $(this)
+        .attr("id")
+        .replace("list-", "");
+        //update array on tasks object and save
+        tasks[arrName] = tempArr;
+        saveTasks();
+      },
+  stop: function(event) {
+  $(this).removeClass("dropover");
+  }
+});
+
+$("#trash").droppable({
+  accept: ".card .list-group-item",
+  tolerance: "touch",
+  drop: function(event, ui) {
+    ui.draggable.remove();
+  },
+  over: function(event, ui) {
+    console.log(ui);
+  },
+  out: function(event, ui) {
+    console.log(ui);
+  }
+});
 
 
 // modal was triggered
@@ -137,8 +203,6 @@ $(".list-group").on("blur", "textarea", function() {
 //of current element, represented by $(this)
 ///var text = $(this).text();
 ///console.log(text);
-
-
 
 // due date was clicked
 $(".list-group").on("click", "span", function() {
