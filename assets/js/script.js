@@ -18,26 +18,6 @@ var createTask = function(taskText, taskDate, taskList) {
   $("#list-" + taskList).append(taskLi);
 };
 
-//set to accept the task's <li> element as a parameter
-var auditTask = function(taskEl) {
-  // get date from task element
-  var date = $(taskEl).find("span").text().trim();
-  //convert to moment object at 5pm
-  var time = moment(date, "L").set("hour", 17);
-  //remove any old classes from element
-  $(taskEl).removeClass("list-group-item-warning list-group-item-danger");
-  // apply new class if task is near/over due date, using query method '.isAfter'
-  if (moment().isAfter(time)) {
-    $(taskEl).addClass("list-group-item-danger");
-  } 
-  //using the else if statement, if task is due one day from now (neg #= now-future date; so use absolute value), will get yellow background
-  else if (Math.abs(moment().diff(time, "days")) <= 2) {
-    $(taskEl).addClass("list-group-item-warning");
-  }
-};
-
-
-
 var loadTasks = function() {
   tasks = JSON.parse(localStorage.getItem("tasks"));
 
@@ -53,7 +33,6 @@ var loadTasks = function() {
 
   // loop over object properties
   $.each(tasks, function(list, arr) {
-    console.log(list, arr);
     // then loop over sub-array
     arr.forEach(function(task) {
       createTask(task.text, task.date, list);
@@ -66,6 +45,26 @@ var saveTasks = function() {
 };
 //tasks are saved in an array that's a property of an object_
 
+//set to accept the task's <li> element as a parameter
+var auditTask = function(taskEl) {
+  // get date from task element
+  var date = $(taskEl)
+    .find("span")
+    .text()
+    .trim();
+  //convert to moment object at 5pm
+  var time = moment(date, "L").set("hour", 17);
+  //remove any old classes from element
+  $(taskEl).removeClass("list-group-item-warning list-group-item-danger");
+  // apply new class if task is near/over due date, using query method '.isAfter'
+  if (moment().isAfter(time)) {
+    $(taskEl).addClass("list-group-item-danger"); 
+  //using the else if statement, if task is due one day from now (neg #= now-future date; so use absolute value), will get yellow background
+  } else if (Math.abs(moment().diff(time, "days")) <= 2) {
+    $(taskEl).addClass("list-group-item-warning");
+  }
+};
+
 //enable draggable/sortable feature on list-group element
 $(".card .list-group").sortable({
   connectWith: $(".card .list-group"),
@@ -75,17 +74,20 @@ $(".card .list-group").sortable({
   /*activate: function(event) {
     console.log("activate", this);*/
   activate:function(event, ui){
-  console.log(ui);
+    $(this).addClass("dropover");
+    //be mindful of the decimals and ""
+    $(".bottom-trash").addClass("bottom-trash-drag");
     //captures the object properties 
   },
   deactivate: function(event, ui) {
-    console.log(ui);
+    $(this).removeClass("dropover");
+    $(".bottom-trash").removeClass("bottom-trash-drag")
   },
   over: function(event) {
-  console.log(event);
+    $(event.target).addClass("dropover-active")
   },
   out: function(event) {
-    console.log(event);
+    $(event.target).removeClass("dropover-active")
   },
   update: function(event){
      //array to store the task data in
@@ -112,9 +114,6 @@ $(".card .list-group").sortable({
         tasks[arrName] = tempArr;
         saveTasks();
       },
-  stop: function(event) {
-  $(this).removeClass("dropover");
-  }
 });
 
 $("#trash").droppable({
@@ -122,15 +121,23 @@ $("#trash").droppable({
   tolerance: "touch",
   drop: function(event, ui) {
     ui.draggable.remove();
+    $(".bottom-trash").removeClass("bottom-trash-active");
   },
   over: function(event, ui) {
     console.log(ui);
+    $(".bottom-trash").addClass("bottom-trash-active");
   },
   out: function(event, ui) {
     console.log(ui);
+    $(".bottom-trash").removeClass("bottom-trash-active");
   }
 });
 
+// convert text field into a jquery date picker
+$("#modalDueDate").datepicker({
+  // force user to select a future date
+  minDate: 1
+});
 
 // modal was triggered
 $("#task-form-modal").on("show.bs.modal", function() {
@@ -145,7 +152,7 @@ $("#task-form-modal").on("shown.bs.modal", function() {
 });
 
 // save button in modal was clicked
-$("#task-form-modal .btn-primary").click(function() {
+$("#task-form-modal .btn-save").click(function() {
   // get form values
   var taskText = $("#modalTaskDescription").val();
   var taskDate = $("#modalDueDate").val();
@@ -187,9 +194,7 @@ textInput.trigger("focus");
 //trim is undefined
 $(".list-group").on("blur", "textarea", function() {
   //get the textarea's current value/text
-  var text = $(this)
-    .val()
-    .trim();
+  var text = $(this).val()
 
   //get the parent ul's id attribute
   var status = $(this)
@@ -222,8 +227,6 @@ $(".list-group").on("blur", "textarea", function() {
 //of current element, represented by $(this)
 ///var text = $(this).text();
 ///console.log(text);
-
-$("#modalDueDate").datepicker();
 
 // due date was clicked
 $(".list-group").on("click", "span", function() {
@@ -285,10 +288,20 @@ $("#remove-tasks").on("click", function() {
     tasks[key].length = 0;
     $("#list-" + key).empty();
   }
+  console.log(tasks);
   saveTasks();
 });
 
 // load tasks for the first time
 loadTasks();
+
+
+//pass each element using selector in the callback function, and that element is expressed in the el arg of the fxn. 
+//then auditTask() passes the element to its routines using the el argument
+setInterval(function() {
+  $(".card .list-group-item").each(function(){
+    auditTask($(this));
+  });
+}, (1800000));
 
 
